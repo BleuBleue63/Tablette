@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tablette Coach</title>
+<style>
+    body {
+        background-color: #000;
+        color: white;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+    }
+
+    .header {
+        text-align: center;
+        padding: 10px;
+        font-size: 2em;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .state-ferme {
+        background-color: #330000;
+        color: #ff0000;
+    }
+
+    .state-pause {
+        background-color: #332200;
+        color: #ffaa00;
+    }
+
+    .state-ouvert {
+        background-color: #003300;
+        color: #00ff00;
+    }
+
+    .section {
+        display: flex;
+        gap: 30px;
+        margin-top: 20px;
+    }
+
+    .left {
+        background-color: #222;
+        padding: 20px;
+        border: 1px solid #555;
+        width: 300px;
+    }
+
+    .zip-box, .phone-box {
+        background-color: #333;
+        border: 1px solid #555;
+        padding: 10px;
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    input[type="text"] {
+        width: 80%;
+        font-size: 1.2em;
+        text-align: center;
+        background-color: #111;
+        color: white;
+        border: none;
+        padding: 5px;
+    }
+
+    .phone-box {
+        background-color: #ccc;
+        color: #a00;
+        font-weight: bold;
+        font-size: 2em;
+    }
+
+    .button-state {
+        border: none;
+        padding: 10px 15px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .right {
+        flex-grow: 1;
+        background-color: #111;
+        padding: 20px;
+        border: 1px solid #333;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        color: white;
+    }
+
+    th, td {
+        border-bottom: 1px solid #333;
+        padding: 8px;
+        text-align: center;
+    }
+
+    select {
+        background-color: #222;
+        color: white;
+        border: 1px solid #555;
+        padding: 5px;
+        border-radius: 4px;
+    }
+
+    .editable {
+        background-color: #000;
+        color: white;
+        border: 1px solid #444;
+        padding: 5px;
+        text-align: center;
+        width: 90%;
+    }
+
+    .present {
+        background-color: rgba(0, 255, 0, 0.2);
+    }
+
+    .pause {
+        background-color: rgba(255, 165, 0, 0.2);
+    }
+
+    .off {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+</style>
+</head>
+<body>
+
+    <div class="header state-ferme" id="stateHeader">FERMÉ</div>
+
+    <div class="section">
+        <div class="left">
+            <div class="zip-box">
+                <label>ZIP :</label><br>
+                <input type="text" id="zipInput">
+            </div>
+
+            <div class="phone-box">
+                <button class="button-state state-ferme" id="stateButton">FERMÉ</button><br>
+                <input type="text" id="phoneInput" maxlength="8">
+            </div>
+        </div>
+
+        <div class="right">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Présence</th>
+                        <th>Nom / Numéro</th>
+                    </tr>
+                </thead>
+                <tbody id="playerTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    const states = ["FERMÉ", "OUVERT", "PAUSE"];
+    let currentState = 0;
+    const header = document.getElementById("stateHeader");
+    const stateBtn = document.getElementById("stateButton");
+
+    function applyStateColors() {
+        header.className = "header";
+        stateBtn.className = "button-state";
+        switch (states[currentState]) {
+            case "FERMÉ":
+                header.classList.add("state-ferme");
+                stateBtn.classList.add("state-ferme");
+                break;
+            case "OUVERT":
+                header.classList.add("state-ouvert");
+                stateBtn.classList.add("state-ouvert");
+                break;
+            case "PAUSE":
+                header.classList.add("state-pause");
+                stateBtn.classList.add("state-pause");
+                break;
+        }
+    }
+
+    function updateState() {
+        header.textContent = states[currentState];
+        stateBtn.textContent = states[currentState];
+        applyStateColors();
+        saveData();
+    }
+
+    header.onclick = stateBtn.onclick = () => {
+        currentState = (currentState + 1) % states.length;
+        updateState();
+    };
+
+    const table = document.getElementById("playerTable");
+
+    function generateTable() {
+        for (let i = 0; i < 20; i++) {
+            const tr = document.createElement("tr");
+
+            const tdSelect = document.createElement("td");
+            const select = document.createElement("select");
+            const optOff = new Option("Off", "Off");
+            const optPause = new Option("En pause", "En pause");
+            const optPresent = new Option("Présent", "Présent");
+            select.append(optOff, optPause, optPresent);
+            select.addEventListener("change", () => {
+                updateRowColor(tr, select.value);
+                saveData();
+            });
+            tdSelect.appendChild(select);
+
+            const tdName = document.createElement("td");
+            const inputName = document.createElement("input");
+            inputName.type = "text";
+            inputName.className = "editable";
+            inputName.placeholder = "Nom || Numéro";
+            inputName.addEventListener("input", saveData);
+            tdName.appendChild(inputName);
+
+            tr.append(tdSelect, tdName);
+            updateRowColor(tr, "Off");
+            table.appendChild(tr);
+        }
+    }
+
+    function updateRowColor(row, value) {
+        row.className = "";
+        if (value === "Présent") row.classList.add("present");
+        else if (value === "En pause") row.classList.add("pause");
+        else row.classList.add("off");
+    }
+
+    generateTable();
+
+    const zipInput = document.getElementById("zipInput");
+    const phoneInput = document.getElementById("phoneInput");
+    zipInput.addEventListener("input", saveData);
+    phoneInput.addEventListener("input", saveData);
+
+    function saveData() {
+        const data = {
+            state: currentState,
+            zip: zipInput.value,
+            phone: phoneInput.value,
+            players: []
+        };
+
+        document.querySelectorAll("#playerTable tr").forEach(tr => {
+            const select = tr.querySelector("select").value;
+            const name = tr.querySelector("input").value;
+            data.players.push({ select, name });
+        });
+
+        localStorage.setItem("tabletData", JSON.stringify(data));
+    }
+
+    function loadData() {
+        const saved = JSON.parse(localStorage.getItem("tabletData") || "{}");
+        if (!saved) return;
+
+        if (saved.state !== undefined) {
+            currentState = saved.state;
+            updateState();
+        } else {
+            applyStateColors();
+        }
+
+        zipInput.value = saved.zip || "";
+        phoneInput.value = saved.phone || "";
+
+        const rows = document.querySelectorAll("#playerTable tr");
+        if (saved.players && saved.players.length === 20) {
+            saved.players.forEach((p, i) => {
+                const row = rows[i];
+                row.querySelector("select").value = p.select;
+                updateRowColor(row, p.select);
+                row.querySelector("input").value = p.name;
+            });
+        }
+    }
+
+    loadData();
+</script>
+
+</body>
+</html>
